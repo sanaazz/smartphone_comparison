@@ -347,7 +347,7 @@ class DataPreProcess:
     def drop_old_columns(self):
         self.df = self.df.drop(
             columns=[
-                    'Network_Technology','Network_','Network_Speed','Display_Type','Memory_','Main Camera_Features', 
+                    'Network_','Network_Speed','Display_Type','Memory_','Main Camera_Features', 
                     'Main Camera_Video', 'Selfie camera_Video',
                     'Sound_Loudspeaker', 'Sound_3.5mm jack', 'Comms_WLAN',
                     'Comms_Bluetooth', 'Comms_Positioning', 'Comms_NFC', 'Comms_Radio',
