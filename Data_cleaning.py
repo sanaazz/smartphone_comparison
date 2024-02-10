@@ -11,8 +11,6 @@ class DataPreProcess:
         else:
             self.df = data_input
 
-      # Convert to string and remove leading "~"
-    
     def process_main_camera_columns(self):
         camera_types = {
             'Main Camera_Single': 1,
@@ -178,44 +176,7 @@ class DataPreProcess:
         self.df['Screen_To_Body_Ratio'] = self.df['Display_Size'].apply(
             lambda x: self._extract_with_regex(x, r'(~\d+\.?\d*%)')
         )
-        def remove_tilde_percent(value):
-            try:
-                return float(str(value).replace("~", "").replace("%", ""))
-            except:
-                return (str(value).replace("~", "").replace("%", ""))
-        self.df['Screen_To_Body_Ratio']= self.df['Screen_To_Body_Ratio'].apply(remove_tilde_percent)
-        self.df['Screen_To_Body_Ratio'].value_counts()
-    def SIM_process(self):
-        type_sim = []
-        count = []
-        for x in list(self.df['Body_SIM']):
-            try:
-                x_lower = x.lower()
-                nano = x_lower.find('nano')
-                mini = x_lower.find('mini')
-                micro = x_lower.find('micro')
-                if nano > -1 :
-                    type_sim.append('nano')
-                elif micro > -1 :
-                    type_sim.append('micro')
-                elif mini > -1 :
-                    type_sim.append('mini')
-                else:
-                    type_sim.append('unkomwn')
-                dual = x_lower.find('dual')
-                single = x_lower.find('single')
-                if (single > -1) & (dual > -1):
-                    count.append('both')
-                elif dual > -1:
-                    count.append('dual')
-                else:
-                    count.append('single')
-            except:
-                type_sim.append(np.nan)
-                count.append(np.nan)
-        self.df['SIM_type'] = type_sim
-        self.df['SIM_count'] = count
-    
+
     def extract_resolution_details(self):
         self.df['Resolution_Pixels'] = self.df['Display_Resolution'].apply(
             lambda x: self._extract_with_regex(x, r'(\d+ x \d+) pixels')
@@ -226,10 +187,6 @@ class DataPreProcess:
         self.df['PPI_Density'] = self.df['Display_Resolution'].apply(
             lambda x: self._extract_with_regex(x, r'(~?\d+) ppi')
         )
-        def remove_tilde(value):
-            return str(value).lstrip("~")
-        self.df['PPI_Density'] = self.df['PPI_Density'].apply(remove_tilde)
-        self.df['PPI_Density'].value_counts()
 
     def extract_base_os(self):
 
@@ -346,13 +303,7 @@ class DataPreProcess:
 
     def drop_old_columns(self):
         self.df = self.df.drop(
-            columns=[
-                    'Network_Technology','Network_','Network_Speed','Display_Type','Memory_','Main Camera_Features', 
-                    'Main Camera_Video', 'Selfie camera_Video',
-                    'Sound_Loudspeaker', 'Sound_3.5mm jack', 'Comms_WLAN',
-                    'Comms_Bluetooth', 'Comms_Positioning', 'Comms_NFC', 'Comms_Radio',
-                    'Comms_USB', 'Misc_Colors',
-                    "Main Camera_Single", "Main Camera_Dual", "Main Camera_Triple", "Main Camera_Quad",
+            columns=["Main Camera_Single", "Main Camera_Dual", "Main Camera_Triple", "Main Camera_Quad",
                      "Main Camera_Dual or Triple", "Main Camera_Penta", "Main Camera_Five", "Selfie camera_Single",
                      "Selfie camera_Dual", "Selfie camera_Triple", "Selfie camera_", "Main Camera", "Selfie camera",
                      "Main Camera_",
@@ -376,19 +327,6 @@ class DataPreProcess:
     def save_processed_data(self, file_name='processed_data.csv'):
         # Save the processed DataFrame to a CSV file
         self.df.to_csv(file_name, index=False)
-    def final_adjustments(self):
-        self.df['Launch_Announced'] = self.df['Launch_Announced'].replace('Not announced yet', np.nan)
-        self.df['year'] = self.df['Launch_Announced'].str.extract(r'(\d{4})')
-        self.df = self.df[self.df['year'].astype(float) > 2010]
-        self.df['Resolution_Pixels'] = self.df['Resolution_Pixels'].fillna('0 x 0')
-        self.df['Resolution_Pixels'] = self.df['Resolution_Pixels'].astype(str)
-        self.df['Resolution_Pixels'] = self.df['Resolution_Pixels'].apply(lambda x: int(x.split(' x ')[0]) * int(x.split(' x ')[1]) if x != 'nan' else np.nan)
-    def year_to_int(self):
-        int_year = []
-        for x in list(self.df['year']):
-            m = int(x)
-            int_year.append(m)
-        self.df['year'] = int_year
 
     def process(self):
         self.process_main_camera_columns()
@@ -401,7 +339,7 @@ class DataPreProcess:
         self.network_tech_process()
         self.battery_capacity_process()
         self.sensors_process()
-        self.SIM_process()
+
         self.extract_display_characteristics()
         self.extract_resolution_details()
         self.extract_base_os()
@@ -413,8 +351,6 @@ class DataPreProcess:
         self.convert_storage_ram()
         self.clean_and_extract_price()
         self.drop_old_columns()
-        self.final_adjustments()
-        self.year_to_int()
         return self.df
 
 
