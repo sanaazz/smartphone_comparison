@@ -201,7 +201,7 @@ class DataPreProcess:
                 elif mini > -1 :
                     type_sim.append('mini')
                 else:
-                    type_sim.append('unknown)
+                    type_sim.append('unknown')
                 dual = x_lower.find('dual')
                 single = x_lower.find('single')
                 if (single > -1) & (dual > -1):
