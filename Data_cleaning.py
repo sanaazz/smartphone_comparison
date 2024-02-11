@@ -332,7 +332,7 @@ class DataPreProcess:
                 currency = currency_symbols.get(currency, 'Unknown')
                 amount = float(amount)
                 return amount
-            return 'Unknown', None
+            return None
 
         self.df['Cleaned_Price'] = pd.DataFrame(
             self.df['Misc_Price'].apply(clean_price).tolist(), index=self.df.index
