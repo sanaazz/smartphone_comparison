@@ -201,7 +201,7 @@ class DataPreProcess:
                 elif mini > -1 :
                     type_sim.append('mini')
                 else:
-                    type_sim.append('unkomwn')
+                    type_sim.append('unknown')
                 dual = x_lower.find('dual')
                 single = x_lower.find('single')
                 if (single > -1) & (dual > -1):
@@ -469,6 +469,9 @@ class DataPreProcess:
         self.df['Resolution_Pixels'] = self.df['Resolution_Pixels'].fillna('0 x 0')
         self.df['Resolution_Pixels'] = self.df['Resolution_Pixels'].astype(str)
         self.df['Resolution_Pixels'] = self.df['Resolution_Pixels'].apply(lambda x: int(x.split(' x ')[0]) * int(x.split(' x ')[1]) if x != 'nan' else np.nan)
+        self.df['Screen_To_Body_Ratio'] = pd.to_numeric(self.df['Screen_To_Body_Ratio'], errors='coerce')
+        self.df['PPI_Density']=pd.to_numeric(self.df['PPI_Density'], errors='coerce')
+        
     def year_to_int(self):
         int_year = []
         for x in list(self.df['year']):
