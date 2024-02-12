@@ -7,7 +7,7 @@ class DataPreProcess:
     def __init__(self, data_input):
         # If data_input is a string, assume it's a filename. Otherwise, assume it's a DataFrame.
         if isinstance(data_input, str):
-            self.df = pd.read_csv(data_input)
+            self.df = pd.read_csv(data_input, )
         else:
             self.df = data_input
 
@@ -296,7 +296,7 @@ class DataPreProcess:
         # Return 'Unknown' if none of the conditions are met
         return 'Unknown'
 
-    def expand_memory_configurations(self, column_name='Memory_Internal'):
+    """def expand_memory_configurations(self, column_name='Memory_Internal'):
         # Temporary container for the new rows
         temp_df_list = []
 
@@ -321,22 +321,107 @@ class DataPreProcess:
                                                                    expand=False).astype(float)
         ram_in_mb = self.df['Memory_Internal'].str.extract(r'(\d+)\s*MB RAM', expand=False).astype(float) / 1024
         self.df['RAM_GB'].fillna(ram_in_mb, inplace=True)
+"""
+
+    def process_memory_data(self):
+        # Example of calling the function with a memory data string
+        self.df['Possible_Storages_Split'], self.df['Possible_RAMs_Split'] = \
+            zip(*self.df['Memory_Internal'].apply(lambda x: self.extract_storage_and_ram_split_values(x)))
+
+    def extract_storage_and_ram_split_values(self, memory_str):
+        if pd.isna(memory_str):
+            return [], []  # Return empty lists if the value is NaN
+
+        unique_storages = set()
+        unique_rams = set()
+
+        # Split the string to handle multiple configurations
+        split_memory_str = re.split(r'/|,| or ', memory_str)
+
+        for part in split_memory_str:
+            # Look for storage size patterns, ignoring details in parentheses
+            storage_match = re.search(r'(\d+GB|\d+MB)(?=\s|\(|$)', part)
+            ram_match = re.findall(r'(\d+GB|\d+MB) RAM', part)
+
+            if storage_match:
+                unique_storages.add(storage_match.group(1))
+            if ram_match:
+                unique_rams.update([ram.replace(' RAM', '') for ram in ram_match])
+
+        return list(unique_storages), list(unique_rams)
+    # Apply the adjusted function to each row in the DataFrame
+        #self.df['Possible_Storages_Split'], self.df['Possible_RAMs_Split'] = zip(*self.df['Memory_Internal'].apply(extract_storage_and_ram_split_values))
 
     def clean_and_extract_price(self):
         def clean_price(price):
-            pattern = re.compile(r'([\$\€\£])?\s*(\d+(?:\.\d+)?)')
-            matches = pattern.findall(str(price))
-            if matches:
-                currency_symbols = {'$': 'USD', '€': 'EUR', '£': 'GBP'}
-                currency, amount = matches[0]
-                currency = currency_symbols.get(currency, 'Unknown')
-                amount = float(amount)
-                return amount
-            return None
+            if pd.isna(price):
+                return None, None, None, None, None  # Return None for all currencies if the price string is NaN
 
-        self.df['Cleaned_Price'] = pd.DataFrame(
-            self.df['Misc_Price'].apply(clean_price).tolist(), index=self.df.index
-        )
+                # Define regular expressions for EUR, USD, GBP, and INR prices, including optional prefixes like "About"
+            regex_patterns = {
+                'EUR': r'(?:About\s)?\€\s*(\d{1,3}(?:,\d{3})*\.?\d*)|(?:About\s)?(\d{1,3}(?:,\d{3})*\.?\d*)\s*EUR',
+                'USD': r'(?:About\s)?\$\s*(\d{1,3}(?:,\d{3})*\.?\d*)',
+                'GBP': r'(?:About\s)?£\s*(\d{1,3}(?:,\d{3})*\.?\d*)',
+                'INR': r'(?:About\s)?₹\s*(\d{1,3}(?:,\d{3})*\.?\d*)|(?:About\s)?(\d{1,3}(?:,\d{3})*\.?\d*)\s*INR'
+            }
+
+            # Initialize variables to store extracted prices
+            price_eur, price_usd, price_gbp, price_inr, price_other = None, None, None, None, None
+
+            # Attempt to extract EUR, USD, GBP, and INR prices
+            for currency, pattern in regex_patterns.items():
+                match = re.search(pattern, price)
+                if match:
+                    # Remove commas from the matched price and convert to float
+                    price = match.group(1) or match.group(2)  # Group 2 is for EUR pattern with "About"
+                    if price:
+                        price = price.replace(',', '')
+                        if currency == 'EUR':
+                            price_eur = float(price)
+                        elif currency == 'USD':
+                            price_usd = float(price)
+                        elif currency == 'GBP':
+                            price_gbp = float(price)
+                        elif currency == 'INR':
+                            price_inr = float(price)
+
+            # If none of the specific currencies were found, attempt to extract any numeric value as 'other'
+            if not any([price_eur, price_usd, price_gbp, price_inr]):
+                match = re.search(r'(\d{1,3}(?:,\d{3})*\.?\d*)', price)
+                if match:
+                    price_other = float(match.group(1).replace(',', ''))
+
+            return price_eur, price_usd, price_gbp, price_inr, price_other
+            # matches = pattern.findall(str(price))
+            # if matches:
+            #    currency_symbols = {'$': 'USD', '€': 'EUR', '£': 'GBP', '₹': 'INR'}
+            #    currency, amount = matches[0]
+            #    amount = float(amount)
+            #    return amount
+            #return None
+
+
+        #self.df['Cleaned_Price'] = pd.DataFrame(
+        #    self.df['Misc_Price'].apply(clean_price).tolist(), index=self.df.index
+        #)
+        # Apply the updated function to extract prices
+        extracted_prices = self.df['Misc_Price'].apply(lambda x: clean_price(x))
+        # Create separate columns for each currency's price
+        self.df['Price_EUR'], self.df['Price_USD'], self.df['Price_GBP'], self.df['Price_INR'], self.df['Price_Other'] = zip(*extracted_prices)
+        usd_to_eur_rate = 0.93
+        inr_to_eur_rate = 0.011
+        gbp_to_eur_rate = 1.17
+        for index, row in self.df.iterrows():
+            if pd.isna(row['Price_EUR']):  # Check if Price_EUR is NaN
+                if not pd.isna(row['Price_USD']):
+                    # Convert USD to EUR and update
+                    self.df.at[index, 'Price_EUR'] = row['Price_USD'] * usd_to_eur_rate
+                elif not pd.isna(row['Price_GBP']):
+                # Convert INR to EUR and update
+                     self.df.at[index, 'Price_EUR'] = row['Price_INR'] * gbp_to_eur_rate
+                elif not pd.isna(row['Price_INR']):
+                    # Convert INR to EUR and update
+                    self.df.at[index, 'Price_EUR'] = row['Price_INR'] * inr_to_eur_rate
 
     def _extract_with_regex(self, text, pattern):
         if pd.isna(text):
@@ -367,7 +452,8 @@ class DataPreProcess:
                      'Battery_Stand-by', 'Battery_Talk time', 'Features_', 'Sound_',
                      'Battery_Music play', 'Platform', 'Memory_Phonebook', 'Memory_Call records',
                      'Features_Messaging', 'Features_Games', 'Features_Java', 'Misc_SAR EU', 'Body_Keyboard',
-                     'Features_Browser', 'Sound_Alert types', 'Features_Clock', 'Features_Alarm', 'Features_Languages'])
+                     'Features_Browser', 'Sound_Alert types', 'Features_Clock', 'Features_Alarm', 'Features_Languages','Price_USD',
+                     'Price_GBP', 'Price_INR', 'Price_Other'])
 
     def drop_columns(self, columns_to_drop):
 
@@ -409,8 +495,9 @@ class DataPreProcess:
         self.extract_chipset_manufacturer()
         self.extract_cpu_core_count()
         self.preprocess_memory_card_slot()
-        self.expand_memory_configurations()
-        self.convert_storage_ram()
+        """self.expand_memory_configurations()
+        self.convert_storage_ram()"""
+        self.process_memory_data()
         self.clean_and_extract_price()
         self.drop_old_columns()
         self.final_adjustments()
