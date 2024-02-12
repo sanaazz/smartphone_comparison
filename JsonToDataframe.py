@@ -1,7 +1,7 @@
 import json
 import pandas as pd
 
-# Assuming `json_file_path` is the path to your JSON file
+
 json_file_path = 'phone_info.json'
 
 # Load the JSON data
@@ -9,7 +9,7 @@ with open(json_file_path) as file:
     data = json.load(file)
 
 
-# Example flatten_json function
+
 def flatten_json(y):
     out = {}
 
@@ -48,3 +48,5 @@ df = process_json(data)
 df.to_csv('flattened_data.csv', index=False)
 
 print(df.head())
+
+
