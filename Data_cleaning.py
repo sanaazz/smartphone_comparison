@@ -11,8 +11,8 @@ class DataPreProcess:
         else:
             self.df = data_input
 
-      # Convert to string and remove leading "~"
-    
+    # Convert to string and remove leading "~"
+
     def process_main_camera_columns(self):
         camera_types = {
             'Main Camera_Single': 1,
@@ -178,13 +178,16 @@ class DataPreProcess:
         self.df['Screen_To_Body_Ratio'] = self.df['Display_Size'].apply(
             lambda x: self._extract_with_regex(x, r'(~\d+\.?\d*%)')
         )
+
         def remove_tilde_percent(value):
             try:
                 return float(str(value).replace("~", "").replace("%", ""))
             except:
                 return (str(value).replace("~", "").replace("%", ""))
-        self.df['Screen_To_Body_Ratio']= self.df['Screen_To_Body_Ratio'].apply(remove_tilde_percent)
+
+        self.df['Screen_To_Body_Ratio'] = self.df['Screen_To_Body_Ratio'].apply(remove_tilde_percent)
         self.df['Screen_To_Body_Ratio'].value_counts()
+
     def SIM_process(self):
         type_sim = []
         count = []
@@ -194,11 +197,11 @@ class DataPreProcess:
                 nano = x_lower.find('nano')
                 mini = x_lower.find('mini')
                 micro = x_lower.find('micro')
-                if nano > -1 :
+                if nano > -1:
                     type_sim.append('nano')
-                elif micro > -1 :
+                elif micro > -1:
                     type_sim.append('micro')
-                elif mini > -1 :
+                elif mini > -1:
                     type_sim.append('mini')
                 else:
                     type_sim.append('unknown')
@@ -215,7 +218,7 @@ class DataPreProcess:
                 count.append(np.nan)
         self.df['SIM_type'] = type_sim
         self.df['SIM_count'] = count
-    
+
     def extract_resolution_details(self):
         self.df['Resolution_Pixels'] = self.df['Display_Resolution'].apply(
             lambda x: self._extract_with_regex(x, r'(\d+ x \d+) pixels')
@@ -226,8 +229,10 @@ class DataPreProcess:
         self.df['PPI_Density'] = self.df['Display_Resolution'].apply(
             lambda x: self._extract_with_regex(x, r'(~?\d+) ppi')
         )
+
         def remove_tilde(value):
             return str(value).lstrip("~")
+
         self.df['PPI_Density'] = self.df['PPI_Density'].apply(remove_tilde)
         self.df['PPI_Density'].value_counts()
 
@@ -296,84 +301,104 @@ class DataPreProcess:
         # Return 'Unknown' if none of the conditions are met
         return 'Unknown'
 
-    """def expand_memory_configurations(self, column_name='Memory_Internal'):
-        # Temporary container for the new rows
-        temp_df_list = []
+    def expand_memory_configurations(self, column_name='Memory_Internal', extraprice=None):
+        expanded_df_list = []
 
         for _, row in self.df.iterrows():
-            configs = str(row[column_name]).split(', ') if pd.notnull(row[column_name]) else [None]
+            value = str(row[column_name]) if pd.notnull(row[column_name]) else ''
+            configs = re.split(r',|;', value)
+
             for config in configs:
-                new_row = row.copy()
-                new_row[column_name] = config
-                temp_df_list.append(new_row)
+                storage, ram = self.extract_storage_and_ram(config.strip())
 
-        self.df = pd.DataFrame(temp_df_list).reset_index(drop=True)
+                if storage and ram:
+                    new_row = row.copy()
+                    new_row['Storage'] = storage
+                    new_row['RAM'] = ram
+                    expanded_df_list.append(new_row)
 
-    def convert_storage_ram(self):
-        # Convert storage and RAM sizes
-        self.df['Internal_Storage_GB'] = self.df['Memory_Internal'].str.extract(r'(\d+)\s*GB',
-                                                                                expand=False).astype(
-            float)
-        storage_in_mb = self.df['Memory_Internal'].str.extract(r'(\d+)\s*MB', expand=False).astype(float) / 1024
-        self.df['Internal_Storage_GB'].fillna(storage_in_mb, inplace=True)
+        self.df = pd.DataFrame(expanded_df_list).reset_index(drop=True)
 
-        self.df['RAM_GB'] = self.df['Memory_Internal'].str.extract(r'(\d+)\s*GB RAM',
-                                                                   expand=False).astype(float)
-        ram_in_mb = self.df['Memory_Internal'].str.extract(r'(\d+)\s*MB RAM', expand=False).astype(float) / 1024
-        self.df['RAM_GB'].fillna(ram_in_mb, inplace=True)
-"""
+        if extraprice is not None:
+            for index, extra_row in extraprice.iterrows():
+                for index1, df_row in self.df.iterrows():
+                    if extra_row['Model'] == df_row['model']:
+                        memory_config = f"{df_row.get('Storage', '')} {df_row.get('RAM', '')} RAM".strip()
+                        if memory_config == extra_row['Configuration']:
+                            self.df.at[index1, 'Misc_Price'] = extra_row['Price']
 
-    def process_memory_data(self):
-        # Example of calling the function with a memory data string
-        self.df['Possible_Storages_Split'], self.df['Possible_RAMs_Split'] = \
-            zip(*self.df['Memory_Internal'].apply(lambda x: self.extract_storage_and_ram_split_values(x)))
+    def extract_storage_and_ram(self, config):
+        patterns = {
+            'general': re.compile(
+                r'(?P<storage>\d+\.?\d*\s*[GTMB]B)(?:\s*\(\d+\.?\d*\s*[GTMB]B\s*user available\))?'
+                r'(?:/\s*\d+\.?\d*\s*[GTMB]B\s*\([^)]+\))?'
+                r',?\s*(?P<ram>\d+\.?\d*\s*[GTMB]B)\s*RAM'
+            ),
+            'user_available': re.compile(
+                r'(?P<storage>\d+\.?\d*\s*[GTMB]B)\s*\((?P<user_available>\d+\.?\d*\s*[GTMB]B)\s*user available\),?\s*(?P<ram>\d+\.?\d*\s*[GTMB]B|\d+\.?\d*\s*[GM]B)\s*RAM'
+            ),
+            'ram_before_rom': re.compile(
+                r'(?P<ram>\d+\.?\d*\s*[GM]B)\s*RAM,\s*(?P<storage>\d+\.?\d*\s*[GM]B)\s*ROM'
+            ),
+            'carrier_specific': re.compile(
+                r'(?P<storage>\d+\.?\d*\s*[GTMB]B)(?:/\s*\d+\.?\d*\s*[GTMB]B)?(?:\s*\([^)]+\))?,\s*(?P<ram>\d+\.?\d*\s*[GTMB]B|\d+\.?\d*\s*[GM]B)\s*RAM'
+            ),
+            'multi_storage_user_available': re.compile(
+                r'(?P<storage_options>\d+\.?\d*\s*[GTMB]B(?:/\d+\.?\d*\s*[GTMB]B)*)(?:\s*\(\d+\.?\d*\s*[GTMB]B\s*user available\))?,?\s*(?P<ram>\d+\.?\d*\s*[GTMB]B|\d+\.?\d*\s*[GM]B)\s*RAM'
+            ),
+            'multi_storage_single_ram': re.compile(
+                r'(?P<storage>\d+\.?\d*\s*[GTMB]B)/(?P<additional_storage>\d+\.?\d*\s*[GTMB]B)(?:\s*\([^)]*\))?,\s*(?P<ram>\d+\.?\d*\s*[GTMB]B|\d+\.?\d*\s*[GM]B)\s*RAM'
+            ),
+            'rom_ram_explicit': re.compile(
+                r'(?P<storage>\d+\.?\d*\s*[GTMB]B)\s*ROM,\s*(?P<ram>\d+\.?\d*\s*[GTMB]B)\s*RAM'
+            ),
+        }
 
-    def extract_storage_and_ram_split_values(self, memory_str):
-        if pd.isna(memory_str):
-            return [], []  # Return empty lists if the value is NaN
+        storage, ram = None, None
 
-        unique_storages = set()
-        unique_rams = set()
+        for case, pattern in patterns.items():
+            match = pattern.search(config)
+            if match:
+                if case == 'user_available' and 'user_available' in match.groupdict():
+                    storage = match.group('user_available')
+                else:
+                    storage = match.group('storage')
 
-        # Split the string to handle multiple configurations
-        split_memory_str = re.split(r'/|,| or ', memory_str)
+                ram = match.group('ram')
+                if storage and '/' in storage:
+                    storage = storage.split('/')[0].strip()
+                if case == 'carrier_specific' and '/' in match.group('storage'):
+                    storage_options = re.split(r'/', match.group('storage'))
+                    storage = storage_options[0].strip()
 
-        for part in split_memory_str:
-            # Look for storage size patterns, ignoring details in parentheses
-            storage_match = re.search(r'(\d+GB|\d+MB)(?=\s|\(|$)', part)
-            ram_match = re.findall(r'(\d+GB|\d+MB) RAM', part)
+                break
+        if not storage and not ram:
+            simple_storage = re.match(r'^(\d+\.?\d*\s*[GTMB]B)$', config)
+            simple_ram = re.match(r'^(\d+\.?\d*\s*[GM]B)\s*RAM$', config)
 
-            if storage_match:
-                unique_storages.add(storage_match.group(1))
-            if ram_match:
-                unique_rams.update([ram.replace(' RAM', '') for ram in ram_match])
+            if simple_storage:
+                storage = simple_storage.group(1)
+            elif simple_ram:
+                ram = simple_ram.group(1)
 
-        return list(unique_storages), list(unique_rams)
-    # Apply the adjusted function to each row in the DataFrame
-        #self.df['Possible_Storages_Split'], self.df['Possible_RAMs_Split'] = zip(*self.df['Memory_Internal'].apply(extract_storage_and_ram_split_values))
+        return storage, ram
 
     def clean_and_extract_price(self):
         def clean_price(price):
             if pd.isna(price):
-                return None, None, None, None, None  # Return None for all currencies if the price string is NaN
+                return None, None, None, None, None
 
-                # Define regular expressions for EUR, USD, GBP, and INR prices, including optional prefixes like "About"
             regex_patterns = {
                 'EUR': r'(?:About\s)?\€\s*(\d{1,3}(?:,\d{3})*\.?\d*)|(?:About\s)?(\d{1,3}(?:,\d{3})*\.?\d*)\s*EUR',
                 'USD': r'(?:About\s)?\$\s*(\d{1,3}(?:,\d{3})*\.?\d*)',
                 'GBP': r'(?:About\s)?£\s*(\d{1,3}(?:,\d{3})*\.?\d*)',
                 'INR': r'(?:About\s)?₹\s*(\d{1,3}(?:,\d{3})*\.?\d*)|(?:About\s)?(\d{1,3}(?:,\d{3})*\.?\d*)\s*INR'
             }
-
-            # Initialize variables to store extracted prices
             price_eur, price_usd, price_gbp, price_inr, price_other = None, None, None, None, None
-
-            # Attempt to extract EUR, USD, GBP, and INR prices
             for currency, pattern in regex_patterns.items():
                 match = re.search(pattern, price)
                 if match:
-                    # Remove commas from the matched price and convert to float
-                    price = match.group(1) or match.group(2)  # Group 2 is for EUR pattern with "About"
+                    price = match.group(1) or match.group(2)
                     if price:
                         price = price.replace(',', '')
                         if currency == 'EUR':
@@ -384,43 +409,26 @@ class DataPreProcess:
                             price_gbp = float(price)
                         elif currency == 'INR':
                             price_inr = float(price)
-
-            # If none of the specific currencies were found, attempt to extract any numeric value as 'other'
             if not any([price_eur, price_usd, price_gbp, price_inr]):
                 match = re.search(r'(\d{1,3}(?:,\d{3})*\.?\d*)', price)
                 if match:
                     price_other = float(match.group(1).replace(',', ''))
 
             return price_eur, price_usd, price_gbp, price_inr, price_other
-            # matches = pattern.findall(str(price))
-            # if matches:
-            #    currency_symbols = {'$': 'USD', '€': 'EUR', '£': 'GBP', '₹': 'INR'}
-            #    currency, amount = matches[0]
-            #    amount = float(amount)
-            #    return amount
-            #return None
 
-
-        #self.df['Cleaned_Price'] = pd.DataFrame(
-        #    self.df['Misc_Price'].apply(clean_price).tolist(), index=self.df.index
-        #)
-        # Apply the updated function to extract prices
         extracted_prices = self.df['Misc_Price'].apply(lambda x: clean_price(x))
-        # Create separate columns for each currency's price
-        self.df['Price_EUR'], self.df['Price_USD'], self.df['Price_GBP'], self.df['Price_INR'], self.df['Price_Other'] = zip(*extracted_prices)
+        self.df['Price_EUR'], self.df['Price_USD'], self.df['Price_GBP'], self.df['Price_INR'], self.df[
+            'Price_Other'] = zip(*extracted_prices)
         usd_to_eur_rate = 0.93
         inr_to_eur_rate = 0.011
         gbp_to_eur_rate = 1.17
         for index, row in self.df.iterrows():
-            if pd.isna(row['Price_EUR']):  # Check if Price_EUR is NaN
+            if pd.isna(row['Price_EUR']):
                 if not pd.isna(row['Price_USD']):
-                    # Convert USD to EUR and update
                     self.df.at[index, 'Price_EUR'] = row['Price_USD'] * usd_to_eur_rate
                 elif not pd.isna(row['Price_GBP']):
-                # Convert INR to EUR and update
-                     self.df.at[index, 'Price_EUR'] = row['Price_INR'] * gbp_to_eur_rate
+                    self.df.at[index, 'Price_EUR'] = row['Price_INR'] * gbp_to_eur_rate
                 elif not pd.isna(row['Price_INR']):
-                    # Convert INR to EUR and update
                     self.df.at[index, 'Price_EUR'] = row['Price_INR'] * inr_to_eur_rate
 
     def _extract_with_regex(self, text, pattern):
@@ -432,46 +440,45 @@ class DataPreProcess:
     def drop_old_columns(self):
         self.df = self.df.drop(
             columns=[
-                    'Network_','Network_Speed','Display_Type','Memory_','Main Camera_Features', 
-                    'Main Camera_Video', 'Selfie camera_Video',
-                    'Sound_Loudspeaker', 'Sound_3.5mm jack', 'Comms_WLAN',
-                    'Comms_Bluetooth', 'Comms_Positioning', 'Comms_NFC', 'Comms_Radio',
-                    'Comms_USB', 'Misc_Colors',
-                    "Main Camera_Single", "Main Camera_Dual", "Main Camera_Triple", "Main Camera_Quad",
-                     "Main Camera_Dual or Triple", "Main Camera_Penta", "Main Camera_Five", "Selfie camera_Single",
-                     "Selfie camera_Dual", "Selfie camera_Triple", "Selfie camera_", "Main Camera", "Selfie camera",
-                     "Main Camera_",
-                     'Display_Size', 'Display_Resolution', 'Platform_OS', 'Platform_Chipset', 'Platform_CPU',
-                     'Platform_GPU',
-                     'Memory_Internal', 'Memory_Card slot', 'Misc_Models', 'Misc_Price',
-                     'Body_Dimensions', 'Body_Weight', 'Network_2G bands', 'Network_3G bands', 'Network_4G bands',
-                     'Network_5G bands', 'Battery_Type', 'Features_Sensors',
-                     'Body_Build', 'Selfie camera_Features', 'Display_Protection',
-                     'Battery_Charging', 'Display_', 'Misc_SAR', 'Network_GPRS',
-                     'Network_EDGE', 'Body_', 'Comms_Infrared port',
-                     'Battery_Stand-by', 'Battery_Talk time', 'Features_', 'Sound_',
-                     'Battery_Music play', 'Platform', 'Memory_Phonebook', 'Memory_Call records',
-                     'Features_Messaging', 'Features_Games', 'Features_Java', 'Misc_SAR EU', 'Body_Keyboard',
-                     'Features_Browser', 'Sound_Alert types', 'Features_Clock', 'Features_Alarm', 'Features_Languages','Price_USD',
-                     'Price_GBP', 'Price_INR', 'Price_Other'])
-
-    def drop_columns(self, columns_to_drop):
-
-        self.df.drop(columns=columns_to_drop, inplace=True, errors='ignore')
+                'Network_', 'Network_Speed', 'Display_Type', 'Memory_', 'Main Camera_Features',
+                'Main Camera_Video', 'Selfie camera_Video',
+                'Sound_Loudspeaker', 'Sound_3.5mm jack', 'Comms_WLAN',
+                'Comms_Bluetooth', 'Comms_Positioning', 'Comms_NFC', 'Comms_Radio',
+                'Comms_USB', 'Misc_Colors',
+                "Main Camera_Single", "Main Camera_Dual", "Main Camera_Triple", "Main Camera_Quad",
+                "Main Camera_Dual or Triple", "Main Camera_Penta", "Main Camera_Five", "Selfie camera_Single",
+                "Selfie camera_Dual", "Selfie camera_Triple", "Selfie camera_", "Main Camera", "Selfie camera",
+                "Main Camera_",
+                'Display_Size', 'Display_Resolution', 'Platform_OS', 'Platform_Chipset', 'Platform_CPU',
+                'Platform_GPU',
+                'Memory_Card slot', 'Misc_Models', 'Misc_Price', 'Memory_Internal',
+                'Body_Dimensions', 'Body_Weight', 'Network_2G bands', 'Network_3G bands', 'Network_4G bands',
+                'Network_5G bands', 'Battery_Type', 'Features_Sensors',
+                'Body_Build', 'Selfie camera_Features', 'Display_Protection',
+                'Battery_Charging', 'Display_', 'Misc_SAR', 'Network_GPRS',
+                'Network_EDGE', 'Body_', 'Comms_Infrared port',
+                'Battery_Stand-by', 'Battery_Talk time', 'Features_', 'Sound_',
+                'Battery_Music play', 'Platform', 'Memory_Phonebook', 'Memory_Call records',
+                'Features_Messaging', 'Features_Games', 'Features_Java', 'Misc_SAR EU', 'Body_Keyboard',
+                'Features_Browser', 'Sound_Alert types', 'Features_Clock', 'Features_Alarm', 'Features_Languages',
+                'Price_USD',
+                'Price_GBP', 'Price_INR', 'Price_Other'])
 
     def save_processed_data(self, file_name='processed_data.csv'):
         # Save the processed DataFrame to a CSV file
         self.df.to_csv(file_name, index=False)
+
     def final_adjustments(self):
         self.df['Launch_Announced'] = self.df['Launch_Announced'].replace('Not announced yet', np.nan)
         self.df['year'] = self.df['Launch_Announced'].str.extract(r'(\d{4})')
         self.df = self.df[self.df['year'].astype(float) > 2010]
         self.df['Resolution_Pixels'] = self.df['Resolution_Pixels'].fillna('0 x 0')
         self.df['Resolution_Pixels'] = self.df['Resolution_Pixels'].astype(str)
-        self.df['Resolution_Pixels'] = self.df['Resolution_Pixels'].apply(lambda x: int(x.split(' x ')[0]) * int(x.split(' x ')[1]) if x != 'nan' else np.nan)
+        self.df['Resolution_Pixels'] = self.df['Resolution_Pixels'].apply(
+            lambda x: int(x.split(' x ')[0]) * int(x.split(' x ')[1]) if x != 'nan' else np.nan)
         self.df['Screen_To_Body_Ratio'] = pd.to_numeric(self.df['Screen_To_Body_Ratio'], errors='coerce')
-        self.df['PPI_Density']=pd.to_numeric(self.df['PPI_Density'], errors='coerce')
-        
+        self.df['PPI_Density'] = pd.to_numeric(self.df['PPI_Density'], errors='coerce')
+
     def year_to_int(self):
         int_year = []
         for x in list(self.df['year']):
@@ -479,7 +486,7 @@ class DataPreProcess:
             int_year.append(m)
         self.df['year'] = int_year
 
-    def process(self):
+    def process(self, extra_data=None):
         self.process_main_camera_columns()
         self.process_selfie_camera_columns()
         self.process_camera_resolutions()
@@ -498,9 +505,7 @@ class DataPreProcess:
         self.extract_chipset_manufacturer()
         self.extract_cpu_core_count()
         self.preprocess_memory_card_slot()
-        """self.expand_memory_configurations()
-        self.convert_storage_ram()"""
-        self.process_memory_data()
+        self.expand_memory_configurations(extraprice=extra_data)
         self.clean_and_extract_price()
         self.drop_old_columns()
         self.final_adjustments()
@@ -508,6 +513,7 @@ class DataPreProcess:
         return self.df
 
 
+extra = pd.read_csv('pricing.csv')
 data_processor = DataPreProcess('flattened_data.csv')
-data_processor.process()
+data_processor.process(extra)
 data_processor.save_processed_data('processed_data.csv')
