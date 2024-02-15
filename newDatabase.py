@@ -8,6 +8,7 @@ import pandas as pd
 
 Base = declarative_base()
 
+ 
 class CreateTable:
     def __init__(self, database_name, username, password):
         engine = create_schema(username, password)
@@ -30,10 +31,7 @@ class device_name(Base):
 class g(Base):
     __tablename__ = 'g'
     id = Column(Integer, primary_key=True,autoincrement=True)
-    n2g = Column(Integer)
-    n3g = Column(Integer)
-    n4g = Column(Integer)
-    n5g = Column(Integer)
+    n2g_n3g_n4g_n5g = Column(String(5))
     
 class technology(Base):
     __tablename__ = 'technology'
@@ -92,22 +90,22 @@ class camera(Base):
     id = Column(Integer, primary_key=True,autoincrement=True)
     main_cameras_num = Column(Integer)
     selfie_cameras_num = Column(Integer)
-    Highest_maincam_res = Column(Integer)
-    Highest_selfiecam_res = Column(Integer)
+    Highest_maincam_res = Column(String(255))
+    Highest_selfiecam_res = Column(String(255))
     
  
 #MAIN   
-# class body(Base):
-#     __tablename__ = 'body'
-#     id = Column(Integer, primary_key=True,autoincrement=True)
-#     weight = Column(Integer)
-#     length = Column(Integer)
-#     width = Column(Integer)
-#     volume = Column(Integer)
+class body(Base):
+    __tablename__ = 'body'
+    id = Column(Integer, primary_key=True,autoincrement=True)
+    weight = Column(Integer)
+    length = Column(Integer)
+    width = Column(Integer)
+    volume = Column(Integer)
     
 #MAIN   
 class battery(Base):
-    __tablename__ = 'body'
+    __tablename__ = 'battery'
     id = Column(Integer, primary_key=True,autoincrement=True)
     Battery_capactiy = Column(Integer)
 
@@ -117,11 +115,6 @@ class Sensors(Base):
     id = Column(Integer, primary_key=True,autoincrement=True)
     Sensors = Column(String(510))  
 
-#MAIN   
-class features(Base):
-    __tablename__ = 'features'
-    id = Column(Integer, primary_key=True,autoincrement=True)
-    Sensors_id = Column(Integer, ForeignKey('Sensors.id'))
     
     
     
@@ -129,12 +122,12 @@ class features(Base):
 class display(Base):
     __tablename__ = 'display'
     id = Column(Integer, primary_key=True,autoincrement=True)
-    Display_Size_Inch = Column(Integer)
-    Display_Size_Cm = Column(Integer)
-    Screen_To_Body_Ratio = Column(Integer)
-    Resolution_Pixels = Column(Integer)
-    Resolution_Ratio = Column(Integer)
-    PPI_Density = Column(Integer)
+    Display_Size_Inch = Column(String(255))
+    Display_Size_Cm = Column(String(255))
+    Screen_To_Body_Ratio = Column(String(255))
+    Resolution_Pixels = Column(String(255))
+    Resolution_Ratio = Column(String(255))
+    PPI_Density = Column(String(255))
     
     
     
@@ -153,7 +146,7 @@ class os(Base):
     __tablename__ = 'os'
     id = Column(Integer, primary_key=True,autoincrement=True)
     name_id = Column(Integer, ForeignKey('os_name.id'))
-    version_id = Column(Integer, ForeignKey('SIM_type.id'))
+    version_id = Column(Integer, ForeignKey('version.id'))
     
 class chipset(Base):
     __tablename__ = 'chipset'
@@ -168,8 +161,8 @@ class cpu(Base):
 class ram(Base):
     __tablename__ = 'ram'
     id = Column(Integer, primary_key=True,autoincrement=True)
-    Storage = Column(String(255))  
-    RAM = Column(String(255))  
+    Internal_Storage_GB = Column(String(255))  
+    
     
 #MAIN  
 class platform(Base):
@@ -189,7 +182,7 @@ class Device(Base):
     camera_id = Column(Integer, ForeignKey('camera.id'))
     body_id = Column(Integer, ForeignKey('body.id'))
     battery_id = Column(Integer, ForeignKey('battery.id'))
-    features_id = Column(Integer, ForeignKey('features.id'))
+    sensors_id = Column(Integer, ForeignKey('Sensors.id'))
     display_id = Column(Integer, ForeignKey('display.id'))
     os_id = Column(Integer, ForeignKey('os.id'))
     platform_id = Column(Integer, ForeignKey('platform.id'))
@@ -211,7 +204,7 @@ class Device(Base):
     
 class AddToTable:
     def __init__(self):
-        self.connection = create_table('root', '361375Ff@', 'GSM')
+        self.connection = create_table('root', 'kian1384', 'GSM')
 
 
         
@@ -225,6 +218,7 @@ class AddToTable:
         csvDevice = pd.read_csv('./processed_data.csv')
         g = csvDevice[['2G','3G','4G','5G']]
         g = g.rename(columns={'2G': 'n2g', '3G': 'n3g','4G': 'n4g', '5G': 'n5g'})
+        g = pd.DataFrame({'n2g_n3g_n4g_n5g': g.astype(str).agg(''.join, axis=1)})
         g = pd.DataFrame(g.drop_duplicates().to_records(index=False))
         g.to_sql('g', con=self.connection, if_exists='append', index=False)
         
@@ -236,33 +230,35 @@ class AddToTable:
         Network_Technology.to_sql('technology', con=self.connection, if_exists='append', index=False)
         
         
+    def addNetwork_Technology(self):
+        csvDevice = pd.read_csv('./processed_data.csv')
+        csvg = csvDevice[['2G','3G','4G','5G']]
+        csvg = csvg.rename(columns={'2G': 'n2g', '3G': 'n3g','4G': 'n4g', '5G': 'n5g'})
+        csvg = pd.DataFrame({'n2g_n3g_n4g_n5g': csvg.astype(str).agg(''.join, axis=1)})
+        csvg = csvg.rename(columns={'2G': 'n2g','3G': 'n3g','4G': 'n4g','5G': 'n5g',})
         
-    # def addNetwork_Technology(self):
-    #     csvDevice = pd.read_csv('./processed_data.csv')
-    #     csvg = csvDevice[['2G','3G','4G','5G']]
-    #     csvg = csvg.rename(columns={'2G': 'n2g','3G': 'n3g','4G': 'n4g','5G': 'n5g',})
-    #     csvtechnology = csvDevice[['Network_Technology']]
+        csvtechnology = csvDevice[['Network_Technology']]
         
-    #     g_data = pd.DataFrame(columns=['g_id'])
-    #     technology_data = pd.DataFrame(columns=['Network_Technology'])
+        g_data = pd.DataFrame(columns=['g_id'])
+        technology_data = pd.DataFrame(columns=['Network_Technology'])
         
-    #     g_mapping = pd.read_sql('SELECT * FROM g', con=self.connection)
-    #     g_mapping['data'] = g_mapping.apply(lambda row: list(map(str, row[['n2g', 'n3g', 'n4g', 'n5g']])), axis=1)
-    #     technology_mapping = pd.read_sql('SELECT * FROM technology', con=self.connection)
-    #     for index, row in csvg.iterrows():
-    #         g_name = row.values[0]
-    #         g_id = g_mapping[g_mapping['data'] == g_name]['id'] 
-    #         g_data.loc[len(g_data)] = g_id
+        g_mapping = pd.read_sql('SELECT * FROM g', con=self.connection)
+        technology_mapping = pd.read_sql('SELECT * FROM technology', con=self.connection)
+        for index, row in csvg.iterrows():
+            g_name = row.values[0]
+            g_id = g_mapping[g_mapping['n2g_n3g_n4g_n5g'] == g_name]['id'].values
+            g_data.loc[len(g_data)] = g_id
                     
-    #     for index, row in csvtechnology.iterrows():
-    #         technology_name = row.values[0]
-    #         technology_id = technology_mapping[technology_mapping['technology'] == technology_name]['id'].values[0]       
-    #         technology_data.loc[len(technology_data)] = technology_id
+        for index, row in csvtechnology.iterrows():
+            technology_name = row.values[0]
+            technology_id = technology_mapping[technology_mapping['technology'] == technology_name]['id'].values[0]       
+            technology_data.loc[len(technology_data)] = technology_id
 
-
-    #     print(g_data)
-    #     # print(technology_data)
-    #     # new_data.to_sql('body_sim', con=self.connection, if_exists='append', index=False)
+        result_df = pd.concat([g_data , technology_data], axis=1)
+        # print(result_df.columns)
+        result_df = result_df.rename(columns={'Network_Technology': 'technology_id'})
+        result_df.to_sql('Network_Technology', con=self.connection, if_exists='append', index=False)
+        
     
     
     def addLaunch_Announced(self):
@@ -276,7 +272,32 @@ class AddToTable:
         Launch_Status = csvDevice[['Launch_Status']]
         Launch_Status = pd.DataFrame(Launch_Status.drop_duplicates().to_records(index=False))
         Launch_Status.to_sql('Launch_Status', con=self.connection, if_exists='append', index=False)
+
+    def addLaunch(self):
+        csvDevice = pd.read_csv('./processed_data.csv')
+        csvStatus = csvDevice[['Launch_Status']]
+        csvAnnounced = csvDevice[['Launch_Announced']]
+        Status_data = pd.DataFrame(columns=['Launch_Status'])
+        Announced_data = pd.DataFrame(columns=['Launch_Announced'])
         
+        Status_mapping = pd.read_sql('SELECT * FROM Launch_Status', con=self.connection)
+        Announced_mapping = pd.read_sql('SELECT * FROM Launch_Announced', con=self.connection)
+        
+        for index, row in csvStatus.iterrows():
+            status_name = row['Launch_Status']
+            Status_id = Status_mapping[Status_mapping['Launch_Status'] == status_name]['id'].values[0]        
+            Status_data.loc[len(Status_data)] = Status_id
+
+        for index, row in csvAnnounced.iterrows():
+            Announced_name = row['Launch_Announced']
+            Announced_id = Announced_mapping[Announced_mapping['Launch_Announced'] == Announced_name]['id'].values[0]        
+            Announced_data.loc[len(Announced_data)] = Announced_id
+
+
+        result_df = pd.concat([Announced_data, Status_data], axis=1)
+        result_df = result_df.rename(columns={'Launch_Announced': 'announced_id', 'Launch_Status': 'status_id'})
+        result_df.to_sql('launch', con=self.connection, if_exists='append', index=False)
+
     def addSIM_type(self):
         csvDevice = pd.read_csv('./processed_data.csv')
         SIM_type = csvDevice[['SIM_type']]
@@ -288,6 +309,29 @@ class AddToTable:
         SIM_count = csvDevice[['SIM_count']]
         SIM_count = pd.DataFrame(SIM_count.drop_duplicates().to_records(index=False))
         SIM_count.to_sql('SIM_count', con=self.connection, if_exists='append', index=False)
+
+    def addSim(self):
+        csvDevice = pd.read_csv('./processed_data.csv')
+        csvDevice = csvDevice.fillna(0)
+        csvtype = csvDevice[['SIM_type']]
+        csvbody = csvDevice[['Body_SIM']]
+        csvcount = csvDevice[['SIM_count']]
+        type_data = pd.DataFrame(columns=['SIM_type'])
+        count_data = pd.DataFrame(columns=['SIM_count'])
+        
+        type_mapping = pd.read_sql('SELECT * FROM SIM_type', con=self.connection)
+        count_mapping = pd.read_sql('SELECT * FROM SIM_count', con=self.connection)
+        
+        for index, row in csvtype.iterrows():
+            type_name = row['SIM_type']
+            try : 
+                Status_id = type_mapping[type_mapping['SIM_type'] == type_name]['id'].values[0]      
+                type_data.loc[len(type_data)] = Status_id
+            except:
+                type_data.loc[len(type_data)] = 4
+                
+                # print('type_name',type_name)
+                # print('type_mapping["SIM_type"]',type_mapping['SIM_type'])
         
     def addSensors(self):
         csvDevice = pd.read_csv('./processed_data.csv')
@@ -323,26 +367,107 @@ class AddToTable:
         
     def addRam(self):
         csvDevice = pd.read_csv('./processed_data.csv')
-        ram = csvDevice[['Storage','RAM']]
-        ram = pd.DataFrame(ram.drop_duplicates().to_records(index=False))
-        ram.to_sql('ram', con=self.connection, if_exists='append', index=False)
+        csvDevice['Internal_Storage_GB'] = csvDevice['Internal_Storage_GB'].astype(str) + ',' + csvDevice['RAM_GB'].astype(str)
+        RAM_GB = csvDevice[['Internal_Storage_GB']]
+        RAM_GB = pd.DataFrame( RAM_GB.drop_duplicates().to_records(index=False))
+        RAM_GB.to_sql('ram', con=self.connection, if_exists='append', index=False)
+    
+    def addBattery(self):
+        csvDevice = pd.read_csv('./processed_data.csv')
+        Battery_capactiy = csvDevice[['Battery_capactiy']]
+        Battery_capactiy = pd.DataFrame( Battery_capactiy.drop_duplicates().to_records(index=False))
+        Battery_capactiy.to_sql('battery', con=self.connection, if_exists='append', index=False)
+    
+    def addbody(self):
+        csvDevice = pd.read_csv('./processed_data.csv')
+        body = csvDevice[['weight' , 'length' , 'width' , 'volume']]
+        body = pd.DataFrame( body.drop_duplicates().to_records(index=False))
+        body.to_sql('body', con=self.connection, if_exists='append', index=False)
+    
+    def addcamera(self):
+        csvDevice = pd.read_csv('./processed_data.csv')
+        csvDevice = csvDevice.rename(columns={'Number of main cameras' :'main_cameras_num'  , 'Number of selfie cameras' : 'selfie_cameras_num'})
+        camera = csvDevice[['main_cameras_num' , 'selfie_cameras_num' , 'Highest_maincam_res' , 'Highest_selfiecam_res']]
+        camera = pd.DataFrame( camera.drop_duplicates().to_records(index=False))
+        camera.to_sql('camera', con=self.connection, if_exists='append', index=False)
+    
+    def addDisplay(self):
+        csvDevice = pd.read_csv('./processed_data.csv')
+        display = csvDevice[['Display_Size_Inch',
+       'Display_Size_Cm', 'Screen_To_Body_Ratio', 'Resolution_Pixels',
+       'Resolution_Ratio', 'PPI_Density']]
+        display = pd.DataFrame( display.drop_duplicates().to_records(index=False))
+        display.to_sql('display', con=self.connection, if_exists='append', index=False)
+    
+    def addOs(self):
+        csvDevice = pd.read_csv('./processed_data.csv')
+        csvDevice = csvDevice.fillna(0)
+        name_mapping = pd.DataFrame(pd.read_sql('SELECT * FROM os_name', con=self.connection))
+        version_mapping = pd.DataFrame(pd.read_sql('SELECT * FROM version', con=self.connection))
+        name = []
+        version = []
+        for row in list(csvDevice['base_os']):
+            if (row == 0):
+                    name.append(5)
+            for j in range(len(list(name_mapping['os_name']))):
+                if (row == list(name_mapping['os_name'])[j]):
+                    name.append(j + 1)
+                
+        for row in list(csvDevice['OS_Version']):
+            for j in range(len(list(version_mapping['OS_Version']))):
+                if (row == list(version_mapping['OS_Version'])[j]):
+                    version.append(j + 1)
+        df2 = pd.DataFrame()
+        df2['version_id'] = version
+        df2['name_id'] = name
+        df2 = df2.drop_duplicates(subset=['version_id' , 'name_id'])
+        os_tab = df2
+        os_tab = df2[['name_id' , 'version_id']]
+        os_tab = pd.DataFrame( os_tab.drop_duplicates().to_records(index=False))
+        os_tab.to_sql('os', con=self.connection, if_exists='append', index=False)
+    
+    def addPlatform(self):
+        csvDevice = pd.read_csv('./processed_data.csv')
+        csvDevice['Chipset_Manufacturer'] = csvDevice['Chipset_Manufacturer'].fillna(0)
+        csvDevice['CPU_Core_Count'] = csvDevice['CPU_Core_Count'].fillna(0)
+        csvDevice['Internal_Storage_GB'] = csvDevice['Internal_Storage_GB'].astype(str) + ',' + csvDevice['RAM_GB'].astype(str)
+        csvDevice = csvDevice.drop_duplicates(['Chipset_Manufacturer' , 'CPU_Core_Count' , 'RAM_GB'])
+        chip_mapping = pd.DataFrame(pd.read_sql('SELECT * FROM chipset', con=self.connection))
+        cpu_mapping = pd.DataFrame(pd.read_sql('SELECT * FROM cpu', con=self.connection))
+        ram_mapping = pd.DataFrame(pd.read_sql('SELECT * FROM ram', con=self.connection))
+        chip = []
+        cpu = []
+        ram = []
+        for row in list(csvDevice['Chipset_Manufacturer']):
+            for j in range(len(list(chip_mapping['Chipset_Manufacturer']))):
+                if (row == list(chip_mapping['Chipset_Manufacturer'])[j]):
+                    chip.append(j + 1)
+                
+        for row in list(csvDevice['CPU_Core_Count']):
+            if (row == 0):
+                    cpu.append(5)
+            for j in range(len(list(cpu_mapping['CPU_Core_Count']))):
+                
+                if (row == list(cpu_mapping['CPU_Core_Count'])[j]):
+                    cpu.append(j + 1)
         
-    # def addBody_sim(self):
-    #     csvDevice = pd.read_csv('./processed_data.csv')
-    #     csvDevice = csvDevice[['Body_SIM']]
-    #     new_data = pd.DataFrame(columns=['sim_id'])
+        for row in list(csvDevice['Internal_Storage_GB']):
+            for j in range(len(list(ram_mapping['Internal_Storage_GB']))):
+                if (row == list(ram_mapping['Internal_Storage_GB'])[j]):
+                    ram.append(j + 1)
 
-    #     sim_mapping = pd.read_sql('SELECT * FROM sim', con=self.connection)
+       
+        df2 = pd.DataFrame()
+        df2['chipset_id'] = chip
+        df2['CPU_id'] = cpu
+        df2['Ram_id'] = ram
+        
+        df2 = df2.drop_duplicates(subset=['chipset_id' , 'CPU_id' , 'Ram_id'])
+        plat_tab = df2
+        plat_tab = df2[['chipset_id' , 'CPU_id' , 'Ram_id']]
+        plat_tab = pd.DataFrame( plat_tab.drop_duplicates().to_records(index=False))
+        plat_tab.to_sql('platform', con=self.connection, if_exists='append', index=False)
 
-    #     for index, row in csvDevice.iterrows():
-    #         sim_name = row['Body_SIM']
-    #         try:
-    #             sim_id = sim_mapping[sim_mapping['Body_SIM'] == sim_name]['id'].values[0]        
-    #             new_data.loc[len(new_data)] = sim_id
-    #         except:
-    #             new_data.loc[len(new_data)] = Null
-
-    #     new_data.to_sql('body_sim', con=self.connection, if_exists='append', index=False)
         
 
 
@@ -351,34 +476,32 @@ class AddToTable:
         self.addDeviceName()
         self.addg()
         self.addTechnology()
-        # self.addNetwork_Technology()
+        self.addNetwork_Technology()
         self.addLaunch_Announced()
         self.addLaunch_Status()
-        # self.addLaunch()
+        self.addLaunch()
         self.addSIM_type()
         self.addSIM_count()
-        # self.addsim()
-        # self.addcamera()
-        # self.addbody()
-        # self.addbattery()
+        self.addSim()
+        self.addcamera()
+        self.addbody()
         self.addSensors()
-        # self.addFeatures()
-        # self.addDisplay()
+        self.addDisplay()
         self.addVersion()
         self.addos_name()
-        # self.addOs()
+        self.addOs()
         self.addChipset()
         self.addCpu()
         self.addRam()
-        # self.addPlatform()
+        self.addBattery()
+        self.addPlatform()
         # self.addDevice()
-
+        # self.addBody_sim()
 
 
 
 if __name__ == '__main__':
-    creator = CreateTable('GSM', 'root', '############')
+    creator = CreateTable('GSM', 'root', 'kian1384')
     add = AddToTable()
     add.addAll()
-
 
