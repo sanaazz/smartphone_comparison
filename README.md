@@ -7,7 +7,7 @@ Welcome to our GSM Arena Data Scraping Project! This initiative is part of our d
 
 ## Project Steps
 
-1. **Data Collection**: We began by scraping the GSM Arena website to gather data on mobile devices. This phase focused on extracting details such as specifications, and prices for a wide array of devices.
+1. **Data Collection**: We began by scraping the GSM Arena website to gather data on mobile devices. This phase focused on extracting details such as specifications and prices for a wide array of devices.
 2. **Database Creation**: The next step involved designing and implementing a database to store the scraped data efficiently. This included creating tables, defining relationships, and ensuring data integrity.
 3. **Data Analysis**: With the data stored, we performed statistical analyses and hypothesis testing to uncover patterns and insights. This step helped us understand device trends, performance metrics, and market preferences.
 4. **Visualization**: Utilizing tools like Power BI, we visualized our findings through dashboards and reports. This allowed us to present our data in an accessible and impactful way, highlighting key insights and trends.
@@ -19,6 +19,6 @@ This project not only provided us with valuable insights into the mobile device 
 
 ## Contributors
 
-- [MahsaNouriZonouz ]([GitHubProfileLink](https://github.com/MahsaNouriZonouz)) 
+- [MahsaNouriZonouz]((https://github.com/MahsaNouriZonouz)) 
 - [Kian Janbozorgi]([GitHubProfileLink](https://github.com/KianJanbozorgi)https://github.com/KianJanbozorgi) 
 - [foad ferdows]([GitHubProfileLink](https://github.com/foadferdows)https://github.com/foadferdows) 
