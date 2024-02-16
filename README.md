@@ -1,8 +1,8 @@
-# GSM Arena Data Scraping Project
+# [gsmarena](https://www.gsmarena.com/) Data Scraping and Visualization Project
 
 ## Introduction
 
-Welcome to our GSM Arena Data Scraping Project! This initiative is part of our data science bootcamp, focusing on practical applications of data gathering, storage, analysis, and visualization techniques. Our primary goal is to scrape the comprehensive and dynamic GSM Arena website, renowned for its extensive database on mobile phones and electronic devices. By extracting detailed information on various devices, we aim to facilitate in-depth comparative analyses and insights into trends within the mobile technology sphere.
+Welcome to our Data Scraping and Visualization Project! This initiative is part of our data science bootcamp, focusing on practical applications of data gathering, storage, analysis, and visualization techniques. Our primary goal is to scrape the comprehensive and dynamic GSM Arena website, renowned for its extensive database on mobile phones and electronic devices. By extracting detailed information on various devices, we aim to facilitate in-depth comparative analyses and insights into trends within the mobile technology sphere.
 
 
 ## Project Steps
