@@ -19,6 +19,6 @@ This project not only provided us with valuable insights into the mobile device 
 
 ## Contributors
 
-- [MahsaNouriZonouz]((https://github.com/MahsaNouriZonouz)) 
-- [Kian Janbozorgi]([GitHubProfileLink](https://github.com/KianJanbozorgi)https://github.com/KianJanbozorgi) 
-- [foad ferdows]([GitHubProfileLink](https://github.com/foadferdows)https://github.com/foadferdows) 
+- [MahsaNouriZonouz](https://github.com/MahsaNouriZonouz)
+- [Kian Janbozorgi](https://github.com/KianJanbozorgi)
+- [foad ferdows](https://github.com/foadferdows) 
